@@ -1655,7 +1655,6 @@ int64_t lzbench_zling_decompress(char *inbuf, size_t insize, char *outbuf, size_
 #define ZSTD_STATIC_LINKING_ONLY
 #include "zstd/lib/zstd.h"
 
-#define QAT
 #ifdef QAT
 #include "qatseqprod.h"
 void *sequenceProducerState;
