@@ -88,7 +88,7 @@ endif
 
 CFLAGS = $(MOREFLAGS) $(CODE_FLAGS) $(OPT_FLAGS_O3) $(DEFINES)
 CFLAGS_O2 = $(MOREFLAGS) $(CODE_FLAGS) $(OPT_FLAGS_O2) $(DEFINES)
-LDFLAGS += $(MOREFLAGS)
+LDFLAGS += $(MOREFLAGS) -lqatseqprod -L../QAT-ZSTD-Plugin/src
 
 
 LZO_FILES = lzo/lzo1.o lzo/lzo1a.o lzo/lzo1a_99.o lzo/lzo1b_1.o lzo/lzo1b_2.o lzo/lzo1b_3.o lzo/lzo1b_4.o lzo/lzo1b_5.o
@@ -325,7 +325,7 @@ pithy/pithy.o: pithy/pithy.cpp
 
 _lzbench/compressors.o: %.o : %.cpp
 	@$(MKDIR) $(dir $@)
-	$(CXX) $(CFLAGS) -std=c++11 $< -c -o $@
+	$(CXX) $(CFLAGS) -I../QAT-ZSTD-Plugin/src -std=c++11 $< -c -o $@
 
 snappy/snappy-sinksource.o snappy/snappy-stubs-internal.o snappy/snappy.o: %.o : %.cc
 	@$(MKDIR) $(dir $@)

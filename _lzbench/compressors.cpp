@@ -1655,6 +1655,12 @@ int64_t lzbench_zling_decompress(char *inbuf, size_t insize, char *outbuf, size_
 #define ZSTD_STATIC_LINKING_ONLY
 #include "zstd/lib/zstd.h"
 
+#define QAT
+#ifdef QAT
+#include "qatseqprod.h"
+void *sequenceProducerState;
+#endif
+
 typedef struct {
     ZSTD_CCtx* cctx;
     ZSTD_DCtx* dctx;
@@ -1668,6 +1674,21 @@ char* lzbench_zstd_init(size_t insize, size_t level, size_t windowLog)
     zstd_params_s* zstd_params = (zstd_params_s*) malloc(sizeof(zstd_params_s));
     if (!zstd_params) return NULL;
     zstd_params->cctx = ZSTD_createCCtx();
+#ifdef QAT
+    /* Start QAT device, start QAT device at any
+    time before compression job started */
+    QZSTD_startQatDevice();
+    /* Create sequence producer state for QAT sequence producer */
+    sequenceProducerState = QZSTD_createSeqProdState();
+    /* register qatSequenceProducer */
+    ZSTD_registerSequenceProducer(
+        zstd_params->cctx,
+        sequenceProducerState,
+        qatSequenceProducer
+    );
+    /* Enable sequence producer fallback */
+    ZSTD_CCtx_setParameter(zstd_params->cctx, ZSTD_c_enableSeqProducerFallback, 1);
+#endif
     zstd_params->dctx = ZSTD_createDCtx();
 #if 1
     zstd_params->cdict = NULL;
@@ -1692,6 +1713,13 @@ void lzbench_zstd_deinit(char* workmem)
     if (zstd_params->dctx) ZSTD_freeDCtx(zstd_params->dctx);
     if (zstd_params->cdict) ZSTD_freeCDict(zstd_params->cdict);
     free(workmem);
+#ifdef QAT
+    /* Free sequence producer state */
+    QZSTD_freeSeqProdState(sequenceProducerState);
+    /* Please call QZSTD_stopQatDevice before
+    QAT is no longer used or the process exits */
+    QZSTD_stopQatDevice();
+#endif
 }
 
 int64_t lzbench_zstd_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t windowLog, char* workmem)
@@ -1710,8 +1738,10 @@ int64_t lzbench_zstd_compress(char *inbuf, size_t insize, char *outbuf, size_t o
         zstd_params->zparams.cParams.windowLog = windowLog;
         zstd_params->zparams.cParams.chainLog = windowLog + ((zstd_params->zparams.cParams.strategy == ZSTD_btlazy2) || (zstd_params->zparams.cParams.strategy == ZSTD_btopt) || (zstd_params->zparams.cParams.strategy == ZSTD_btultra));
     }
-    res = ZSTD_compress_advanced(zstd_params->cctx, outbuf, outsize, inbuf, insize, NULL, 0, zstd_params->zparams);
+    // res = ZSTD_compress_advanced(zstd_params->cctx, outbuf, outsize, inbuf, insize, NULL, 0, zstd_params->zparams);
 //    res = ZSTD_compressCCtx(zstd_params->cctx, outbuf, outsize, inbuf, insize, level);
+
+    res = ZSTD_compress2(zstd_params->cctx, outbuf, outsize, inbuf, insize);
 #else
     if (!zstd_params->cdict) return 0;
     res = ZSTD_compress_usingCDict(zstd_params->cctx, outbuf, outsize, inbuf, insize, zstd_params->cdict);
