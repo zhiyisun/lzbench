@@ -208,7 +208,7 @@ endif
 ifeq "$(DONT_BUILD_LZ4_QAT)" "1"
 	DEFINES += -DBENCH_REMOVE_LZ4_QAT
 else
-    LZ4_QAT_FILES = /usr/local/lib/libqatzip.so
+    LZ4_QAT_FILES = /usr/lib/x86_64-linux-gnu/libqatzip.so
     LDFLAGS += -lqatzip
 endif
 
