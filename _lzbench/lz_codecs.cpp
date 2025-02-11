@@ -318,7 +318,83 @@ int64_t lzbench_lz4_decompress(char *inbuf, size_t insize, char *outbuf, size_t 
 
 #endif
 
+#ifndef BENCH_REMOVE_LZ4_QAT
+#include <qatzip.h>
 
+char* lzbench_lz4_qat_init(size_t insize, size_t level, size_t windowLog)
+{
+    QzSession_T* sess = (QzSession_T*) malloc(sizeof(QzSession_T));
+
+    // Initialize QAT hardware
+    int status = qzInit(sess, QZ_SW_BACKUP_DEFAULT);
+    if (status != QZ_OK && status != QZ_DUPLICATE) {
+      free(sess);
+      return NULL;
+    }
+
+    // Get the default parameters
+    QzSessionParams_T df_params;
+    status = qzGetDefaults(&df_params);
+    if (status != QZ_OK) {
+      // Attempt to teardown the session
+      qzTeardownSession(sess);
+      // Attempt to close the session
+      qzClose(sess);
+      free(sess);
+      return NULL;
+    }
+
+    QzSessionParamsLZ4_T lz4_params = {};
+
+    lz4_params.common_params.direction = QZ_DIR_BOTH;
+    lz4_params.common_params.comp_lvl = level;
+    lz4_params.common_params.comp_algorithm = df_params.comp_algorithm;
+    lz4_params.common_params.max_forks = QZ_MAX_FORK_DEFAULT;
+    lz4_params.common_params.sw_backup = df_params.sw_backup;
+    lz4_params.common_params.hw_buff_sz = df_params.hw_buff_sz;
+    lz4_params.common_params.strm_buff_sz = df_params.strm_buff_sz;
+    lz4_params.common_params.input_sz_thrshold = df_params.input_sz_thrshold;
+    lz4_params.common_params.req_cnt_thrshold = df_params.req_cnt_thrshold;
+    lz4_params.common_params.wait_cnt_thrshold = df_params.wait_cnt_thrshold;
+    lz4_params.common_params.polling_mode = QZ_PERIODICAL_POLLING;
+    lz4_params.common_params.is_sensitive_mode = 0;
+    status = qzSetupSessionLZ4(sess, &lz4_params);
+
+    // Check how the setup attempt went
+    if (status != QZ_OK) {
+      // Attempt to teardown the session
+      qzTeardownSession(sess);
+      // Attempt to close the session
+      qzClose(sess);
+      free(sess);
+      return NULL;
+    }
+
+    return (char*) sess;
+}
+
+void lzbench_lz4_qat_deinit(char* workmem)
+{
+    QzSession_T* sess = (QzSession_T*) workmem;
+    if (!sess) return;
+
+    qzTeardownSession(sess);
+    qzClose(sess);
+    free(workmem);
+}
+
+int64_t lzbench_lz4_qat_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char* workmem)
+{
+    QzSession_T* sess = (QzSession_T*) workmem;
+    return qzCompress(sess, (unsigned char*) inbuf, (unsigned int*) &insize, (unsigned char*) outbuf, (unsigned int*) &outsize, 1);
+}
+
+int64_t lzbench_lz4_qat_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char* workmem)
+{
+    QzSession_T* sess = (QzSession_T*) workmem;
+    return qzDecompress(sess, (unsigned char*) inbuf, (unsigned int*) &insize, (unsigned char*) outbuf, (unsigned int*) &outsize);
+}
+#endif
 
 #ifndef BENCH_REMOVE_LZAV
 #include "lzav/lzav.h"

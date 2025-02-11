@@ -185,6 +185,18 @@ int64_t lzbench_return_0(char *inbuf, size_t insize, char *outbuf, size_t outsiz
 	#define lzbench_lz4_decompress NULL
 #endif
 
+#ifndef BENCH_REMOVE_LZ4_QAT
+	char* lzbench_lz4_qat_init(size_t insize, size_t level, size_t windowLog);
+	void lzbench_lz4_qat_deinit(char* workmem);
+	int64_t lzbench_lz4_qat_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char* workmem);
+	int64_t lzbench_lz4_qat_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char* workmem);
+#else
+	#define lzbench_lz4_qat_init NULL
+	#define lzbench_lz4_qat_deinit NULL
+	#define lzbench_lz4_qat_compress NULL
+	#define lzbench_lz4_qat_decompress NULL
+#endif
+
 
 #ifndef BENCH_REMOVE_LZAV
 	int64_t lzbench_lzav_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char*);
