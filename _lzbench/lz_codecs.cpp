@@ -348,14 +348,14 @@ char* lzbench_lz4_qat_init(size_t insize, size_t level, size_t windowLog)
 
     lz4_params.common_params.direction = QZ_DIR_BOTH;
     lz4_params.common_params.comp_lvl = level;
-    lz4_params.common_params.comp_algorithm = df_params.comp_algorithm;
+    lz4_params.common_params.comp_algorithm = QZ_LZ4;
     lz4_params.common_params.max_forks = QZ_MAX_FORK_DEFAULT;
-    lz4_params.common_params.sw_backup = df_params.sw_backup;
-    lz4_params.common_params.hw_buff_sz = df_params.hw_buff_sz;
-    lz4_params.common_params.strm_buff_sz = df_params.strm_buff_sz;
-    lz4_params.common_params.input_sz_thrshold = df_params.input_sz_thrshold;
+    lz4_params.common_params.sw_backup = QZ_SW_BACKUP_DEFAULT;
+    lz4_params.common_params.hw_buff_sz = QZ_HW_BUFF_SZ;
+    lz4_params.common_params.strm_buff_sz = QZ_STRM_BUFF_SZ_DEFAULT;
+    lz4_params.common_params.input_sz_thrshold = QZ_COMP_THRESHOLD_DEFAULT;
     lz4_params.common_params.req_cnt_thrshold = df_params.req_cnt_thrshold;
-    lz4_params.common_params.wait_cnt_thrshold = df_params.wait_cnt_thrshold;
+    lz4_params.common_params.wait_cnt_thrshold = QZ_WAIT_CNT_THRESHOLD_DEFAULT;
     lz4_params.common_params.polling_mode = QZ_PERIODICAL_POLLING;
     lz4_params.common_params.is_sensitive_mode = 0;
     status = qzSetupSessionLZ4(sess, &lz4_params);
@@ -386,13 +386,35 @@ void lzbench_lz4_qat_deinit(char* workmem)
 int64_t lzbench_lz4_qat_compress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t level, size_t, char* workmem)
 {
     QzSession_T* sess = (QzSession_T*) workmem;
-    return qzCompress(sess, (unsigned char*) inbuf, (unsigned int*) &insize, (unsigned char*) outbuf, (unsigned int*) &outsize, 1);
+    unsigned int src_buf_size = insize;
+    unsigned int dst_buf_size = outsize;
+    int status = qzCompress(sess, (unsigned char*) inbuf, (unsigned int*) &src_buf_size, (unsigned char*) outbuf, (unsigned int*) &dst_buf_size, 1);
+    if (status != QZ_OK) {
+        printf("qzCompress() call returned %d\n", status);
+        return 0;
+    } else {
+        if (insize != src_buf_size) {
+            printf("qzCompress() compressed (%d) less than insize(%ld)\n", src_buf_size, insize);
+        }
+        return (int64_t)dst_buf_size;
+    }
 }
 
 int64_t lzbench_lz4_qat_decompress(char *inbuf, size_t insize, char *outbuf, size_t outsize, size_t, size_t, char* workmem)
 {
     QzSession_T* sess = (QzSession_T*) workmem;
-    return qzDecompress(sess, (unsigned char*) inbuf, (unsigned int*) &insize, (unsigned char*) outbuf, (unsigned int*) &outsize);
+    unsigned int src_buf_size = insize;
+    unsigned int dst_buf_size = outsize;
+    int status = qzDecompress(sess, (unsigned char*) inbuf, (unsigned int*) &src_buf_size, (unsigned char*) outbuf, (unsigned int*) &dst_buf_size);
+    if (status != QZ_OK) {
+        printf("qzDecompress() call returned %d\n", status);
+        return 0;
+    } else {
+        if (outsize != dst_buf_size) {
+            printf("qzDecompress() decompressed (%d) less than outsize(%ld)\n", dst_buf_size, outsize);
+        }
+        return dst_buf_size;
+    }
 }
 #endif
 
