@@ -323,7 +323,7 @@
  
  char* lzbench_lz4_qat_init(size_t insize, size_t level, size_t windowLog)
  {
-     QzSession_T* sess = (QzSession_T*) malloc(sizeof(QzSession_T));
+     QzSession_T* sess = (QzSession_T*) calloc(1, sizeof(QzSession_T));
      if (sess == NULL)
      {
        printf("Failed to malloc QzSession_T\n");
@@ -336,8 +336,6 @@
        printf("qzInit() call for session %p returned %d\n", sess, status);
        free(sess);
        return NULL;
-     } else if (status == QZ_DUPLICATE) {
-       printf("qzInit() call for session %p returned %d (QZ_DUPLICATE)\n", sess, status);
      }
  
      // Get the default parameters
