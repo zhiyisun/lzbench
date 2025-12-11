@@ -1,6 +1,11 @@
 # Directories
 _codelite/
 _visual/
+.vscode/
+
+# Rust-based Density
+misc/density/src/target/
+misc/density/src/Cargo.lock
 
 # Archives
 *.zip
